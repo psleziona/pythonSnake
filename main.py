@@ -22,13 +22,17 @@ class Board:
             # Reset screen and count fps
             self.screen.fill((0, 0, 0))
             self.time_count += self.frame.tick() / 300
+            self.snake.handle_moves()
             if self.time_count > 0.5:
-                self.snake.move()
+                self.snake.move_direction()
                 self.time_count -= 0.5
 
             # Keep snake on surface
             self.snake.draw()
-
+            collision = self.snake.check_self_coll()
+            if collision:
+                break
+                
             # Food generator
             if self.food_counter == 0:
                 self.food_generator()
@@ -62,74 +66,68 @@ class Snake:
         self.snake = [pygame.Rect(self.start_point.x - 2 * self.size, self.start_point.y, self.size, self.size),
                       pygame.Rect(self.start_point.x - self.size, self.start_point.y, self.size, self.size),
                       pygame.Rect(self.start_point, (self.size, self.size))]
-        self.move_direction = 'right'
+        self.direction = 'right'
 
     def draw(self):
-        for block in self.snake:
-            block.x, block.y = self.thru_wall(block.x, block.y)
-            pygame.draw.rect(self.board.screen, (200, 0, 100), block)
+        for i, block in enumerate(self.snake):
+            block.x, block.y = self.through_wall(block.x, block.y)
+            if i == len(self.snake) - 1:
+                pygame.draw.rect(self.board.screen, (10, 200, 50), block)
+            else:
+                pygame.draw.rect(self.board.screen, (100, 0, 100), block)
 
-    def move(self):
+    def handle_moves(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
-            self.turn('up')
+            if self.direction != 'down':
+                self.direction = 'up'
         if keys[pygame.K_s]:
-            self.turn('down')
+            if self.direction != 'up':
+                self.direction = 'down'
         if keys[pygame.K_d]:
-            self.turn('left')
+            if self.direction != 'left':
+                self.direction = 'right'
         if keys[pygame.K_a]:
-            self.turn('right')
-        if self.move_direction == 'right':
-            self.turn('left')
-        if self.move_direction == 'left':
-            self.turn('right')
-        if self.move_direction == 'top':
-            self.turn('up')
-        if self.move_direction == 'down':
-            self.turn('down')
+            if self.direction != 'right':
+                self.direction = 'left'
 
-    def turn(self, dir):
+    def move_direction(self):
         cx, cy = self.snake[-1].x, self.snake[-1].y
         self.snake.pop(0)
-        if dir == 'down':
+        if self.direction == 'down':
             cy += self.size
-            self.move_direction = 'down'
-        elif dir == 'up':
+        elif self.direction == 'up':
             cy -= self.size
-            self.move_direction = 'top'
-        elif dir == 'right':
-            cx -= self.size
-            self.move_direction = 'left'
-        elif dir == 'left':
+        elif self.direction == 'right':
             cx += self.size
-            self.move_direction = 'right'
+        elif self.direction == 'left':
+            cx -= self.size
         self.snake.append(pygame.Rect(cx, cy, self.size, self.size))
 
     def eat(self):
         tailx, taily = self.snake[0].x, self.snake[0].y
-        self.snake[0:0] = [pygame.Rect(tailx, taily, self.size, self.size)]
+        self.snake[0:0] = [pygame.Rect(tailx - 20, taily - 20, self.size, self.size)]
         self.board.food = []
         self.board.food_counter -= 1
 
     def check_self_coll(self):
-        # Sprawdzic czy powtarzaja sie x, y
         for elem in self.snake:
-            pass
+            df = self.snake.count(elem)
+            if df > 1:
+                return True
 
-    def thru_wall(self, x, y):
+    def through_wall(self, x, y):
         max_w = self.board.screen.get_width()
         max_h = self.board.screen.get_height()
         if x >= max_w:
             x -= max_w
         if y >= max_h:
             y -= max_h
-        if x < 0 and self.move_direction == 'left':
+        if x < 0 and self.direction == 'left':
             x += self.board.screen.get_width()
-        if y < 0 and self.move_direction == 'top':
+        if y < 0 and self.direction == 'up':
             y += self.board.screen.get_height()
         return x, y
 
 
 Board()
-
-
